@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Weekly Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .lucide-icon {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2;
+            stroke: currentColor;
+            fill: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="max-w-7xl mx-auto p-6 min-h-screen">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-3xl font-bold text-gray-800">Family Weekly Dashboard</h1>
+                <button id="resetWeek" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-colors">
+                    <svg class="lucide-icon" viewBox="0 0 24 24">
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                        <path d="M21 3v5h-5"/>
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                        <path d="M3 21v-5h5"/>
+                    </svg>
+                    New Week
+                </button>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="mb-4">
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>Weekly Progress</span>
+                    <span id="progressText">0 / 14 tasks</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div id="progressBar" class="bg-green-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div id="progressPercent" class="text-center mt-1 font-semibold text-gray-700">0% Complete</div>
+            </div>
+
+            <!-- Day Selector -->
+            <div id="daySelector" class="flex gap-2 overflow-x-auto">
+                <!-- Days will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Today's Schedule -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 id="scheduleTitle" class="text-2xl font-bold mb-4 text-gray-800">Monday Schedule</h2>
+                <div id="scheduleContent">
+                    <!-- Schedule will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Weekly Tasks Checklist -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Weekly Task Tracker</h2>
+                <div id="tasksContent" class="space-y-6">
+                    <!-- Tasks will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Tips -->
+        <div class="mt-6 bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-bold mb-4 text-gray-800">Weekly Rhythm Tips</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h3 class="font-semibold text-blue-800 mb-2">Batch Cooking</h3>
+                    <p class="text-blue-700 text-sm">Cook double portions 2-3 nights, reheat on busy evenings</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <h3 class="font-semibold text-green-800 mb-2">Divide & Conquer</h3>
+                    <p class="text-green-700 text-sm">Assign chores by task, not time (one always does laundry, other dishes)</p>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <h3 class="font-semibold text-purple-800 mb-2">Toddler Helper</h3>
+                    <p class="text-purple-700 text-sm">Let them "help" with handing clothes, stirring, cleanup games</p>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg">
+                    <h3 class="font-semibold text-orange-800 mb-2">Sunday Reset</h3>
+                    <p class="text-orange-700 text-sm">30-60 min planning session: meals, schedules, drop-offs</p>
+                </div>
+                <div class="bg-pink-50 p-4 rounded-lg">
+                    <h3 class="font-semibold text-pink-800 mb-2">Evening Routine</h3>
+                    <p class="text-pink-700 text-sm">20-30 min shared tidy-up, then downtime or work catch-up</p>
+                </div>
+                <div class="bg-indigo-50 p-4 rounded-lg">
+                    <h3 class="font-semibold text-indigo-800 mb-2">Weekend Balance</h3>
+                    <p class="text-indigo-700 text-sm">Saturday fun + Sunday prep. Solo time for each parent.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // App State
+        let currentDay = new Date().getDay();
+        let currentWeek = 0;
+        let completedTasks = JSON.parse(localStorage.getItem('familyDashboard') || '{}');
+
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        const schedule = {
+            1: { // Monday
+                morning: {
+                    'Parent A': ['Toddler wake-up & breakfast', 'Daycare drop-off'],
+                    'Parent B': ['Prep lunches', 'Quick tidy', 'Commute prep']
+                },
+                daytime: {
+                    'Full-time Parent': ['Work (Office/Remote)', 'Check daycare updates'],
+                    'Part-time Parent': ['Work (Onsite)', 'Quick errands if time']
+                },
+                evening: {
+                    'Both': ['Daycare pickup', 'Family dinner', 'Play time', 'Bedtime routine', 'Evening tidy (20 min)']
+                }
+            },
+            2: { // Tuesday
+                morning: {
+                    'Parent A': ['Toddler routine', 'Breakfast prep'],
+                    'Parent B': ['Exercise/self-care', 'Work prep']
+                },
+                daytime: {
+                    'Full-time Parent': ['Work (Remote)', 'Grocery pickup if needed'],
+                    'Part-time Parent': ['Toddler care', 'Light housework', 'Meal prep']
+                },
+                evening: {
+                    'Both': ['Family time', 'Batch cooking', 'Toddler bedtime', 'Plan tomorrow']
+                }
+            },
+            3: { // Wednesday
+                morning: {
+                    'Parent A': ['Toddler care', 'Laundry start'],
+                    'Parent B': ['Work prep', 'Coffee/breakfast']
+                },
+                daytime: {
+                    'Full-time Parent': ['Work (Office)', 'Team meetings'],
+                    'Part-time Parent': ['Work (Onsite)', 'Errands during break']
+                },
+                evening: {
+                    'Both': ['Pickup coordination', 'Simple dinner', 'Park/outdoor time', 'Early bedtime routine']
+                }
+            },
+            4: { // Thursday
+                morning: {
+                    'Parent A': ['Morning routine', 'Daycare drop'],
+                    'Parent B': ['Meal prep', 'House reset']
+                },
+                daytime: {
+                    'Full-time Parent': ['Work (Remote)', 'Doctor appts if needed'],
+                    'Part-time Parent': ['Toddler activities', 'Major housework', 'Laundry fold']
+                },
+                evening: {
+                    'Both': ['Family dinner', 'Bath time', 'Story time', 'Weekend planning']
+                }
+            },
+            5: { // Friday
+                morning: {
+                    'Parent A': ['Toddler routine', 'Weekend bag prep'],
+                    'Parent B': ['Work prep', 'Week wrap-up']
+                },
+                daytime: {
+                    'Full-time Parent': ['Work (Office)', 'Week close-out'],
+                    'Part-time Parent': ['Work (Onsite)', 'Weekend grocery list']
+                },
+                evening: {
+                    'Both': ['Celebration dinner', 'Relaxed bedtime', 'Week review', 'Movie/downtime']
+                }
+            },
+            6: { // Saturday
+                morning: {
+                    'Family': ['Leisurely breakfast', 'Family outing (park/activities)', 'Fun errands together']
+                },
+                afternoon: {
+                    'Parent A': ['Solo time (gym/hobby)', 'Personal errands'],
+                    'Parent B': ['Toddler nap duty', 'House projects']
+                },
+                evening: {
+                    'Both': ['Takeout/easy dinner', 'Family movie', 'Early bedtime prep']
+                }
+            },
+            0: { // Sunday
+                morning: {
+                    'Both': ['Grocery shopping', 'Weekly meal prep', 'Laundry marathon']
+                },
+                afternoon: {
+                    'Family': ['Home reset time', 'Vacuum/clean', 'Meal plan for week', 'Prep work clothes']
+                },
+                evening: {
+                    'Both': ['Family dinner', 'Early toddler bedtime', 'Weekly planning session', 'Prep for Monday']
+                }
+            }
+        };
+
+        const weeklyTasks = {
+            household: [
+                'Grocery shopping',
+                'Meal prep (2-3 sessions)',
+                'Laundry (wash, dry, fold)',
+                'Kitchen daily cleanup',
+                'Bathroom cleaning',
+                'Vacuum main areas',
+                'Bills/admin tasks'
+            ],
+            selfcare: [
+                'Exercise/movement',
+                'Personal hobbies',
+                'Solo downtime',
+                'Friend connections',
+                'Health appointments',
+                'Reading/learning',
+                'Adequate sleep'
+            ]
+        };
+
+        const taskCategories = {
+            household: { icon: 'home', color: 'bg-blue-100 text-blue-800', label: 'Household' },
+            selfcare: { icon: 'calendar', color: 'bg-orange-100 text-orange-800', label: 'Self Care' }
+        };
+
+        // Icons as SVG strings
+        const icons = {
+            home: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/>',
+            calendar: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+            check: '<polyline points="20,6 9,17 4,12"/>'
+        };
+
+        // Functions
+        function saveState() {
+            localStorage.setItem('familyDashboard', JSON.stringify(completedTasks));
+        }
+
+        function getTaskKey(category, taskIndex) {
+            return `${currentWeek}-${category}-${taskIndex}`;
+        }
+
+        function getTotalTasks() {
+            return Object.values(weeklyTasks).reduce((total, tasks) => total + tasks.length, 0);
+        }
+
+        function getCompletedCount() {
+            return Object.keys(completedTasks).filter(key => 
+                key.startsWith(`${currentWeek}-`) && completedTasks[key]
+            ).length;
+        }
+
+        function getProgressPercentage() {
+            const completed = getCompletedCount();
+            const total = getTotalTasks();
+            return total > 0 ? Math.round((completed / total) * 100) : 0;
+        }
+
+        function updateProgress() {
+            const completed = getCompletedCount();
+            const total = getTotalTasks();
+            const percentage = getProgressPercentage();
+
+            document.getElementById('progressText').textContent = `${completed} / ${total} tasks`;
+            document.getElementById('progressBar').style.width = `${percentage}%`;
+            document.getElementById('progressPercent').textContent = `${percentage}% Complete`;
+        }
+
+        function toggleTask(category, taskIndex) {
+            const taskKey = getTaskKey(category, taskIndex);
+            completedTasks[taskKey] = !completedTasks[taskKey];
+            saveState();
+            renderTasks();
+            updateProgress();
+        }
+
+        function setCurrentDay(dayIndex) {
+            currentDay = dayIndex;
+            renderDaySelector();
+            renderSchedule();
+        }
+
+        function resetWeek() {
+            currentWeek += 1;
+            completedTasks = {};
+            saveState();
+            renderTasks();
+            updateProgress();
+        }
+
+        function renderDaySelector() {
+            const selector = document.getElementById('daySelector');
+            selector.innerHTML = '';
+
+            days.forEach((day, index) => {
+                const button = document.createElement('button');
+                button.textContent = daysShort[index];
+                button.className = `px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
+                    currentDay === index
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`;
+                button.onclick = () => setCurrentDay(index);
+                selector.appendChild(button);
+            });
+        }
+
+        function renderSchedule() {
+            const title = document.getElementById('scheduleTitle');
+            const content = document.getElementById('scheduleContent');
+            
+            title.textContent = `${days[currentDay]} Schedule`;
+            
+            const todaySchedule = schedule[currentDay] || {};
+            
+            if (Object.keys(todaySchedule).length === 0) {
+                content.innerHTML = '<p class="text-gray-500 italic">No specific schedule for this day.</p>';
+                return;
+            }
+
+            content.innerHTML = '';
+
+            Object.entries(todaySchedule).forEach(([timeSlot, assignments]) => {
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'mb-6';
+
+                const timeHeader = document.createElement('h3');
+                timeHeader.className = 'text-lg font-semibold mb-3 text-gray-700 capitalize bg-gray-100 px-3 py-1 rounded';
+                timeHeader.textContent = timeSlot;
+                timeDiv.appendChild(timeHeader);
+
+                Object.entries(assignments).forEach(([person, tasks]) => {
+                    const personDiv = document.createElement('div');
+                    personDiv.className = 'mb-3';
+
+                    const personHeader = document.createElement('h4');
+                    personHeader.className = 'font-medium text-gray-600 mb-1';
+                    personHeader.textContent = `${person}:`;
+                    personDiv.appendChild(personHeader);
+
+                    const taskList = document.createElement('ul');
+                    taskList.className = 'space-y-1';
+
+                    tasks.forEach(task => {
+                        const taskItem = document.createElement('li');
+                        taskItem.className = 'text-gray-600 pl-4 border-l-2 border-gray-200';
+                        taskItem.textContent = `• ${task}`;
+                        taskList.appendChild(taskItem);
+                    });
+
+                    personDiv.appendChild(taskList);
+                    timeDiv.appendChild(personDiv);
+                });
+
+                content.appendChild(timeDiv);
+            });
+        }
+
+        function renderTasks() {
+            const tasksContent = document.getElementById('tasksContent');
+            tasksContent.innerHTML = '';
+
+            Object.entries(weeklyTasks).forEach(([category, tasks]) => {
+                const categoryInfo = taskCategories[category];
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'border-b border-gray-200 pb-4 last:border-b-0';
+
+                // Category header
+                const header = document.createElement('div');
+                header.className = `flex items-center gap-2 mb-3 px-3 py-1 rounded-full inline-flex ${categoryInfo.color}`;
+                header.innerHTML = `
+                    <svg class="lucide-icon" viewBox="0 0 24 24">
+                        ${icons[categoryInfo.icon]}
+                    </svg>
+                    <span class="font-medium text-sm">${categoryInfo.label}</span>
+                `;
+                categoryDiv.appendChild(header);
+
+                // Tasks container
+                const tasksDiv = document.createElement('div');
+                tasksDiv.className = 'space-y-2';
+
+                tasks.forEach((task, index) => {
+                    const taskKey = getTaskKey(category, index);
+                    const isCompleted = completedTasks[taskKey] || false;
+
+                    const taskDiv = document.createElement('div');
+                    taskDiv.className = `flex items-center gap-3 p-2 rounded transition-colors cursor-pointer ${
+                        isCompleted 
+                            ? 'bg-green-50 text-green-800' 
+                            : 'hover:bg-gray-50'
+                    }`;
+                    taskDiv.onclick = () => toggleTask(category, index);
+
+                    const checkbox = document.createElement('div');
+                    checkbox.className = `w-5 h-5 border-2 rounded flex items-center justify-center ${
+                        isCompleted
+                            ? 'bg-green-500 border-green-500 text-white'
+                            : 'border-gray-300 hover:border-green-400'
+                    }`;
+                    
+                    if (isCompleted) {
+                        checkbox.innerHTML = `<svg class="lucide-icon w-3 h-3" viewBox="0 0 24 24">${icons.check}</svg>`;
+                    }
+
+                    const taskText = document.createElement('span');
+                    taskText.textContent = task;
+                    if (isCompleted) {
+                        taskText.className = 'line-through';
+                    }
+
+                    taskDiv.appendChild(checkbox);
+                    taskDiv.appendChild(taskText);
+                    tasksDiv.appendChild(taskDiv);
+                });
+
+                categoryDiv.appendChild(tasksDiv);
+                tasksContent.appendChild(categoryDiv);
+            });
+        }
+
+        // Initialize app
+        function init() {
+            document.getElementById('resetWeek').onclick = resetWeek;
+            
+            renderDaySelector();
+            renderSchedule();
+            renderTasks();
+            updateProgress();
+        }
+
+        // Start the app when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
